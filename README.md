@@ -21,7 +21,7 @@ go build -o main.wasm main.go
 ./build.ps1
 ```
 
-### Run development server (use Python server.http)
+### Run development server (use Python http.server)
 ```powershell
 python -m http.server 8000
 ```
