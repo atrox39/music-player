@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Go MP3 Player</title>
+</head>
+<body>
+    <h1>Reproductor MP3 con Go y Wasm</h1>
+    <button onclick="playSong()">Reproducir</button>
+    <input type="file" id="mp3" name="mp3" accept=".mp3" onchange="handleFile(event)" />
+    <script src="wasm_exec.js"></script>
+    <script>
+        const go = new Go();
+        WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
+            go.run(result.instance);
+        });
+    </script>
+    <script>
+      const handleFile = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        const result = JSON.parse(window.parseMP3(uint8Array));
+        console.log(result);
+        /*
+        const updated = window.updateMetadata(uint8Array);
+        const blob = new Blob([updated], { type: 'audio/mpeg' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.removeChild(a);
+        URL.revokeObjectURL(url);
+        */
+      };
+    </script>
+</body>
+</html>
