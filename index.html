@@ -1,41 +1,85 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-    <meta charset="UTF-8">
-    <title>Go MP3 Player</title>
+  <meta charset="UTF-8">
+  <title>Go MP3 Player</title>
 </head>
+
 <body>
-    <h1>Reproductor MP3 con Go y Wasm</h1>
-    <button onclick="playSong()">Reproducir</button>
-    <input type="file" id="mp3" name="mp3" accept=".mp3" onchange="handleFile(event)" />
-    <script src="wasm_exec.js"></script>
-    <script>
-        const go = new Go();
-        WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
-            go.run(result.instance);
-        });
-    </script>
-    <script>
-      const handleFile = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-        const arrayBuffer = await file.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        const result = JSON.parse(window.parseMP3(uint8Array));
-        console.log(result);
-        /*
-        const updated = window.updateMetadata(uint8Array);
-        const blob = new Blob([updated], { type: 'audio/mpeg' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.name;
-        document.body.appendChild(a);
-        a.click();
-        document.removeChild(a);
-        URL.revokeObjectURL(url);
-        */
+  <input type="file" id="mp3Input" accept="audio/mp3" />
+  <input type="file" id="coverInput" accept="image/*" />
+  <form id="metadataForm">
+    <input type="text" id="title" placeholder="Título" /><br>
+    <input type="text" id="artist" placeholder="Artista" /><br>
+    <input type="text" id="album" placeholder="Álbum" /><br>
+    <input type="text" id="year" placeholder="Año" /><br>
+    <input type="text" id="genre" placeholder="Género" /><br>
+    <input type="number" id="track" placeholder="Número de pista" /><br>
+    <input type="number" id="totalTracks" placeholder="Total pistas" /><br>
+    <button type="button" id="updateBtn">Actualizar y reproducir</button>
+  </form>
+
+  <a id="downloadLink" style="display:none">Descargar MP3</a>
+  <audio id="audioPlayer" controls></audio>
+
+  <script src="wasm_exec.js"></script>
+  <script>
+    const go = new Go();
+    WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
+      go.run(result.instance);
+    });
+  </script>
+  <script>
+    let mp3Bytes;
+
+    document.getElementById("mp3Input").onchange = async e => {
+      const file = e.target.files[0];
+      mp3Bytes = new Uint8Array(await file.arrayBuffer());
+      const metaStr = parseMP3(mp3Bytes);
+      const meta = JSON.parse(metaStr);
+
+      document.getElementById("title").value = meta.title || "";
+      document.getElementById("artist").value = meta.artist || "";
+      document.getElementById("album").value = meta.album || "";
+      document.getElementById("year").value = meta.year || "";
+      document.getElementById("genre").value = meta.genre || "";
+      document.getElementById("track").value = meta.track || "";
+      document.getElementById("totalTracks").value = meta.total || "";
+    };
+
+    document.getElementById("updateBtn").onclick = async () => {
+      const coverFile = document.getElementById("coverInput").files[0];
+      let coverBytes = new Uint8Array(0);
+      if (coverFile) coverBytes = new Uint8Array(await coverFile.arrayBuffer());
+
+      const metadata = {
+        title: document.getElementById("title").value,
+        artist: document.getElementById("artist").value,
+        album: document.getElementById("album").value,
+        year: document.getElementById("year").value,
+        genre: document.getElementById("genre").value,
+        track: parseInt(document.getElementById("track").value),
+        total: parseInt(document.getElementById("totalTracks").value),
+        cover: coverBytes
       };
-    </script>
+
+      const updated = updateMetadata(mp3Bytes, JSON.stringify(metadata));
+
+      // Reproducir en <audio>
+      const blob = new Blob([updated], { type: "audio/mpeg" });
+      const url = URL.createObjectURL(blob);
+      const audio = document.getElementById("audioPlayer");
+      audio.src = url;
+      audio.play();
+
+      // Preparar link de descarga
+      const a = document.getElementById("downloadLink");
+      a.href = url;
+      a.download = "mp3_modificado.mp3";
+      a.style.display = "inline";
+      a.textContent = "Descargar MP3 modificado";
+    };
+  </script>
 </body>
 </html>

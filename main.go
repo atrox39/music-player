@@ -19,7 +19,7 @@ type MP3Metadata struct {
 	Format      string `json:"format"`
 	Track       int    `json:"track"`
 	TotalTracks int    `json:"total"`
-	Cover       []byte `json:"cover"`
+	AlbumArt    []byte `json:"albumArt"`
 }
 
 func updateMetadata(this js.Value, p []js.Value) any {
@@ -41,16 +41,6 @@ func updateMetadata(this js.Value, p []js.Value) any {
 	newTag.SetArtist(mp3metadata.Artist)
 	newTag.AddTextFrame("TRCK", id3v2.EncodingUTF8, fmt.Sprintf("%d/%d", mp3metadata.Track, mp3metadata.TotalTracks))
 
-	if len(mp3metadata.Cover) > 0 {
-		pic := id3v2.PictureFrame{
-			Encoding:    id3v2.EncodingUTF8,
-			MimeType:    "image/jpeg",
-			Picture:     mp3metadata.Cover,
-			Description: "Portada",
-			PictureType: id3v2.PTFrontCover,
-		}
-		newTag.AddAttachedPicture(pic)
-	}
 	// Guardar nueva cabecera + audio original
 	var buf bytes.Buffer
 	if _, err := newTag.WriteTo(&buf); err != nil {
