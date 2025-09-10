@@ -17,3 +17,11 @@ go build -o main.wasm main.go
 ```
 
 ### Use `build.ps1` for build the `main.wasm`
+```powershell
+./build.ps1
+```
+
+### Run development server (use Python server.http)
+```powershell
+python -m http.server 8000
+```
