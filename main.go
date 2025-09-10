@@ -19,7 +19,7 @@ type MP3Metadata struct {
 	Format      string `json:"format"`
 	Track       int    `json:"track"`
 	TotalTracks int    `json:"total"`
-	AlbumArt    []byte `json:"albumArt"`
+	AlbumArt    []byte `json:"albumArt"` // cover image
 }
 
 func updateMetadata(this js.Value, p []js.Value) any {
@@ -40,6 +40,22 @@ func updateMetadata(this js.Value, p []js.Value) any {
 	newTag.SetGenre(mp3metadata.Genre)
 	newTag.SetArtist(mp3metadata.Artist)
 	newTag.AddTextFrame("TRCK", id3v2.EncodingUTF8, fmt.Sprintf("%d/%d", mp3metadata.Track, mp3metadata.TotalTracks))
+
+	// Agregar cover si existe
+	if len(mp3metadata.AlbumArt) > 0 {
+		mime := "image/jpeg"
+		if len(mp3metadata.AlbumArt) > 1 && mp3metadata.AlbumArt[0] == 0x89 && mp3metadata.AlbumArt[1] == 0x50 {
+			mime = "image/png"
+		}
+		pic := id3v2.PictureFrame{
+			Encoding:    id3v2.EncodingUTF8,
+			MimeType:    mime,
+			PictureType: id3v2.PTFrontCover,
+			Description: "Portada",
+			Picture:     mp3metadata.AlbumArt,
+		}
+		newTag.AddAttachedPicture(pic)
+	}
 
 	// Guardar nueva cabecera + audio original
 	var buf bytes.Buffer
@@ -72,6 +88,10 @@ func parseMP3(this js.Value, args []js.Value) interface{} {
 		return js.ValueOf("error: " + err.Error())
 	}
 	track, totalTracks := meta.Track()
+	var cover []byte
+	if pic := meta.Picture(); pic != nil {
+		cover = pic.Data
+	}
 	result := map[string]interface{}{
 		"title":  meta.Title(),
 		"artist": meta.Artist(),
@@ -81,6 +101,7 @@ func parseMP3(this js.Value, args []js.Value) interface{} {
 		"format": meta.Format(),
 		"track":  track,
 		"total":  totalTracks,
+		"cover":  cover, // devolver cover también
 	}
 	jsonBytes, _ := json.Marshal(result)
 	return js.ValueOf(string(jsonBytes))
